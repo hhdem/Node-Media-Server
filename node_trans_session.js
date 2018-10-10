@@ -20,7 +20,7 @@ class NodeTransSession extends EventEmitter {
   run() {
     let vc = 'copy';
     let ac = this.conf.args.ac == 10 ? 'copy' : this.conf.ac ? this.conf.ac : 'aac';
-    let inPath = 'rtmp://127.0.0.1:' + this.conf.port + this.conf.streamPath;
+    let inPath = 'rtmp://127.0.0.1:' + this.conf.port + this.conf.streamPath + '?f=ffmpeg';
     let ouPath = `${this.conf.mediaroot}/${this.conf.app}/${this.conf.stream}`;
     let mapStr = '';
     if (this.conf.mp4) {
@@ -45,8 +45,14 @@ class NodeTransSession extends EventEmitter {
       mapStr += mapDash;
       Logger.log('[Transmuxing DASH] ' + this.conf.streamPath + ' to ' + ouPath + '/' + dashFileName);
     }
+    if (this.conf.screenshot) {
+        let screenshotFileName = 'index.jpg';
+        let mapDash = `${this.conf.screenshotFlags}${ouPath}/${screenshotFileName}`;
+        mapStr += mapDash;
+        Logger.log('[Transmuxing ScreenShot] ' + this.conf.streamPath + ' to ' + ouPath + '/' + screenshotFileName);
+    }
     mkdirp.sync(ouPath);
-    let argv = ['-y', '-fflags', 'nobuffer', '-analyzeduration', '1000000', '-i', inPath, '-c:v', vc, '-c:a', ac, '-f', 'tee', '-map', '0:a?', '-map', '0:v?', mapStr];
+    let argv = ['-y', '-fflags', 'nobuffer', '-analyzeduration', '1000000', '-i', inPath, '-c:v', '-ss', '00:00:01', vc, '-c:a', ac, '-f', 'tee', '-map', '0:a?', '-map', '0:v?', mapStr];
     Logger.ffdebug(argv.toString());
     this.ffmpeg_exec = spawn(this.conf.ffmpeg, argv);
     this.ffmpeg_exec.on('error', (e) => {
@@ -71,7 +77,12 @@ class NodeTransSession extends EventEmitter {
               || filename.endsWith('.m3u8')
               || filename.endsWith('.mpd')
               || filename.endsWith('.m4s')) {
-              fs.unlinkSync(ouPath + '/' + filename);
+                fs.stat(ouPath + '/' + filename, function(err, stat){
+                    if(stat&&stat.isFile()) {
+                        fs.unlinkSync(ouPath + '/' + filename);
+                    }
+                });
+
             }
           })
         }

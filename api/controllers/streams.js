@@ -109,5 +109,17 @@ function getStream(req, res, next) {
   res.json(streamStats);
 }
 
+function stopStream(req, res, next) {
+    let publishStreamPath = `/${req.params.app}/${req.params.stream}`;
+
+    let publisherSession = this.sessions.get(this.publishers.get(publishStreamPath));
+    if (!!publisherSession) {
+        publisherSession.stop();
+    }
+
+    res.json({success: true});
+}
+
 exports.getStreams = getStreams;
 exports.getStream = getStream;
+exports.stopStream = stopStream;
